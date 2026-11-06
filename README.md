@@ -1,2 +1,2 @@
 # ddle
-Wordle-style game where the answer is always "fuck you dd"
+Wordle-style game where the answer is the same thing everyday 
