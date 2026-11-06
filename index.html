@@ -113,6 +113,8 @@ button:disabled:hover{background:transparent;border-color:var(--line-strong)}
 #msg{min-height:20px;margin:18px 0 0;font-size:13px;letter-spacing:.01em;color:var(--muted)}
 #msg[data-state="win"]{color:var(--win)}
 #msg[data-state="lose"]{color:var(--lose)}
+#share{display:none;margin:16px auto 0}
+#share.show{display:inline-block}
 #end{
   display:none;
   max-width:260px;
@@ -165,6 +167,7 @@ button:disabled:hover{background:transparent;border-color:var(--line-strong)}
     <button id="go">Guess</button>
   </div>
   <p id="msg" role="status" aria-live="polite"></p>
+  <button id="share" type="button">Share result</button>
   <div id="end">
     <p class="label">The answer</p>
     <p class="word" id="word"></p>
@@ -184,7 +187,7 @@ document.getElementById('sub').textContent =
 
 const grid = document.getElementById('grid'), msg = document.getElementById('msg'),
       inp = document.getElementById('in'), btn = document.getElementById('go'),
-      end = document.getElementById('end');
+      end = document.getElementById('end'), share = document.getElementById('share');
 const rows = [], rowEls = [];
 for (let r = 0; r < TRIES; r++) {
   const d = document.createElement('div'); d.className = 'row';
@@ -218,6 +221,7 @@ function finish(won) {
   if (won) {
     msg.dataset.state = 'win';
     say('You got it');
+    share.classList.add('show');
   } else {
     document.getElementById('word').textContent = PATTERN;
     end.classList.add('show');
@@ -247,7 +251,7 @@ function guess() {
   const r = guesses.length;
   const w = inp.value.toLowerCase().replace(/[^a-z]/g, '');
   if (w.length !== N) {
-    say('Need ' + N + ' letters (spaces optional)');
+    say('Need ' + N + ' letters');
     return;
   }
   msg.textContent = '';
@@ -256,7 +260,6 @@ function guess() {
   show(w, r, true);
 }
 
-// live preview of typing in the current row
 inp.addEventListener('input', () => {
   if (done) return;
   const w = inp.value.toLowerCase().replace(/[^a-z]/g, '').slice(0, N);
@@ -268,6 +271,44 @@ inp.addEventListener('input', () => {
 });
 btn.onclick = guess;
 inp.addEventListener('keydown', e => { if (e.key === 'Enter') guess(); });
+
+const EMOJI = {g:'🟩', y:'🟨', b:'⬛'};
+function resultText() {
+  const lines = ['ddle #' + num + ' ' + guesses.length + '/' + TRIES, ''];
+  guesses.forEach(w => {
+    const res = score(w);
+    let i = 0, line = '';
+    for (const ch of PATTERN) line += ch === ' ' ? ' ' : EMOJI[res[i++]];
+    lines.push(line);
+  });
+  lines.push('', 'https://therealswa.github.io/ddle/');
+  return lines.join('\n');
+}
+function shareCopied() {
+  share.textContent = 'Copied';
+  setTimeout(() => { share.textContent = 'Share result'; }, 1600);
+}
+function legacyCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.top = '0';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+  if (ok) shareCopied();
+  else share.textContent = 'Copy failed';
+}
+share.onclick = () => {
+  const text = resultText();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(shareCopied, () => legacyCopy(text));
+  } else legacyCopy(text);
+};
 </script>
 </body>
 </html>
